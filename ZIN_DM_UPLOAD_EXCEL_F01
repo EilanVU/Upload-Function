@@ -1,0 +1,472 @@
+*&---------------------------------------------------------------------*
+*& Include          ZIN_DM_UPLOAD_EXCEL_F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*& Form 1000_INIT_PROC
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_INIT_PROC .
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form 1000_SH_FILE
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_SH_FILE .
+  DATA: LT_FILETABLE TYPE FILETABLE,
+        LV_RC        TYPE I.
+
+  CALL METHOD CL_GUI_FRONTEND_SERVICES=>FILE_OPEN_DIALOG
+    EXPORTING
+      FILE_FILTER             = GC_FILTER
+    CHANGING
+      FILE_TABLE              = LT_FILETABLE
+      RC                      = LV_RC
+    EXCEPTIONS
+      FILE_OPEN_DIALOG_FAILED = 1
+      CNTL_ERROR              = 2
+      ERROR_NO_GUI            = 3
+      NOT_SUPPORTED_BY_GUI    = 4
+      OTHERS                  = 5.
+  IF SY-SUBRC = 0.
+    READ TABLE LT_FILETABLE INTO P_FILE INDEX 1.
+  ELSE.
+    MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+      WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form 1000_SH_FNAME
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_SH_FNAME .
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form 1000_UPD_SCREEN
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_UPD_SCREEN .
+
+  IF RB_UPL = 'X'.
+    LOOP AT SCREEN.
+      IF SCREEN-NAME = '%_S_UPLDT_%_APP_%-TEXT'
+      OR SCREEN-NAME = '%_S_UPLDT_%_APP_%-OPTI_PUSH'
+      OR SCREEN-NAME = 'S_UPLDT-LOW'
+      OR SCREEN-NAME = '%_S_UPLDT_%_APP_%-TO_TEXT'
+      OR SCREEN-NAME = 'S_UPLDT-HIGH'
+      OR SCREEN-NAME = '%_P_FNAME_%_APP_%-TEXT'
+      OR SCREEN-NAME = 'P_FNAME'.
+        SCREEN-ACTIVE = 0.
+        MODIFY SCREEN.
+      ENDIF.
+    ENDLOOP.
+  ELSEIF RB_DIS = 'X'.
+    LOOP AT SCREEN.
+      IF SCREEN-NAME = 'P_FILE'
+      OR SCREEN-NAME = '%_P_FILE_%_APP_%-TEXT'.
+        SCREEN-ACTIVE = 0.
+        MODIFY SCREEN.
+      ENDIF.
+    ENDLOOP.
+  ELSEIF RB_DOW = 'X'.
+
+    LOOP AT SCREEN .
+      IF SCREEN-GROUP1 = 'MG'.
+        SCREEN-ACTIVE = 0.
+        MODIFY SCREEN.
+      ENDIF.
+    ENDLOOP.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form 1000_CHECK_PROC
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_CHECK_PROC .
+
+  IF SY-UCOMM <> 'RB_TYPE'.
+    IF RB_UPL IS NOT INITIAL.
+      PERFORM 1000_CHECK_FILE_EXTENSION.
+    ELSEIF RB_DOW IS NOT INITIAL.
+
+    ELSE.
+      IF P_FNAME IS INITIAL.
+        MESSAGE 'Please input File Name' TYPE 'E'.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form 1000_MAIN_PROC
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_MAIN_PROC .
+
+  IF RB_UPL IS NOT INITIAL.
+
+    PERFORM 1000_CRT_DYNAMIC_TAB.
+    PERFORM 1000_UPLOAD_EXCEL.
+    PERFORM 1000_CHECK_DATA_UPLOAD.
+*  PERFORM 1000_SPLIT_HEADER_DETAIL.
+
+  ELSEIF NOT RB_DOW IS INITIAL.
+    PERFORM 1000_DOWNLOAD_TEMPLATE.
+
+  ELSEIF NOT RB_DIS IS INITIAL.
+*    PERFORM 1000_GET_UPLOADED_DATA.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form 1000_CHECK_FILE_EXTENSION
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_CHECK_FILE_EXTENSION .
+  DATA: LV_EXT(4) TYPE C.
+
+  CALL FUNCTION 'TRINT_FILE_GET_EXTENSION'
+    EXPORTING
+      FILENAME  = P_FILE
+    IMPORTING
+      EXTENSION = LV_EXT.
+  IF  LV_EXT <> 'XLSX'
+  AND LV_EXT <> 'XLS'.
+    SET CURSOR FIELD 'P_FILE'.
+    MESSAGE E016.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form 1000_CRT_DYNAMIC_TAB
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_CRT_DYNAMIC_TAB .
+  TYPES: BEGIN OF LTY_EXGRID,
+           C0001  TYPE CHAR255,
+           C0002  TYPE CHAR255,
+           C0003  TYPE CHAR255,
+           C0004  TYPE CHAR255,
+           C0005  TYPE CHAR255,
+           C0006  TYPE CHAR255,
+           C0007  TYPE CHAR255,
+           C0008  TYPE CHAR255,
+           C0009  TYPE CHAR255,
+           C0010  TYPE CHAR255,
+           C0011  TYPE CHAR255,
+           C0012  TYPE CHAR255,
+           C0013  TYPE CHAR255,
+           C0014  TYPE CHAR255,
+           C0015  TYPE CHAR255,
+           C0016  TYPE CHAR255,
+           C0017  TYPE CHAR255,
+           C0018  TYPE CHAR255,
+           C0019  TYPE CHAR255,
+           C0020  TYPE CHAR255,
+           C0021  TYPE CHAR255,
+           C0022  TYPE CHAR255,
+           C0023  TYPE CHAR255,
+           C0024  TYPE CHAR255,
+           C0025  TYPE CHAR255,
+           C0026  TYPE CHAR255,
+           C0027  TYPE CHAR255,
+           C0028  TYPE CHAR255,
+           C0029  TYPE CHAR255,
+           C0030  TYPE CHAR255,
+           C0031  TYPE CHAR255,
+           C0032  TYPE CHAR255,
+           C0033  TYPE CHAR255,
+           C0034  TYPE CHAR255,
+           C0035  TYPE CHAR255,
+           C0036  TYPE CHAR255,
+           C0037  TYPE CHAR255,
+           C0038  TYPE CHAR255,
+           C0039  TYPE CHAR255,
+           C0040  TYPE CHAR255,
+           C0041  TYPE CHAR255,
+           C0042  TYPE CHAR255,
+           C0043  TYPE CHAR255,
+           C0044  TYPE CHAR255,
+           C0045  TYPE CHAR255,
+           C0046  TYPE CHAR255,
+           C0047  TYPE CHAR255,
+           C0048  TYPE CHAR255,
+           C0049  TYPE CHAR255,
+           C0051  TYPE CHAR255,
+           C0052  TYPE CHAR255,
+           C0053  TYPE CHAR255,
+           C0054  TYPE CHAR255,
+           C0055  TYPE CHAR255,
+           C0056  TYPE CHAR255,
+           C0057  TYPE CHAR255,
+           C0058  TYPE CHAR255,
+           C0059  TYPE CHAR255,
+           C0060  TYPE CHAR255,
+           C0061  TYPE CHAR255,
+           C0062  TYPE CHAR255,
+           C0063  TYPE CHAR255,
+           C0064  TYPE CHAR255,
+           C0065  TYPE CHAR255,
+           C0066  TYPE CHAR255,
+           C0067  TYPE CHAR255,
+           C0068  TYPE CHAR255,
+           C0069  TYPE CHAR255,
+           C0070  TYPE CHAR255,
+           C0071  TYPE CHAR255,
+           C0072  TYPE CHAR255,
+           C0073  TYPE CHAR255,
+           C0074  TYPE CHAR255,
+           C0075  TYPE CHAR255,
+           C0076  TYPE CHAR255,
+           C0077  TYPE CHAR255,
+           C0078  TYPE CHAR255,
+           C0079  TYPE CHAR255,
+           C0080  TYPE CHAR255,
+           C0081  TYPE CHAR255,
+           C0082  TYPE CHAR255,
+           C0083  TYPE CHAR255,
+           C0084  TYPE CHAR255,
+           C0085  TYPE CHAR255,
+           C0086  TYPE CHAR255,
+           C0087  TYPE CHAR255,
+           C0088  TYPE CHAR255,
+           C0089  TYPE CHAR255,
+           C0090  TYPE CHAR255,
+           C0091  TYPE CHAR255,
+           C0092  TYPE CHAR255,
+           C0093  TYPE CHAR255,
+           C0094  TYPE CHAR255,
+           C0095  TYPE CHAR255,
+           C0096  TYPE CHAR255,
+           C0097  TYPE CHAR255,
+           C0098  TYPE CHAR255,
+           C0099  TYPE CHAR255,
+           C00100 TYPE CHAR255,
+         END OF LTY_EXGRID.
+  DATA: LT_UPL            TYPE TABLE OF LTY_EXGRID,
+        LT_OUT_LINES      TYPE TABLE OF STRING,
+        LT_RAWDATA        TYPE TRUXS_T_TEXT_DATA,
+        LS_FCAT           LIKE LINE OF GT_FLDCAT_U,
+        LV_COL_POS        TYPE INT4,
+        LV_STRING(262143) TYPE C.
+  REFRESH:
+  LT_UPL,
+  LT_OUT_LINES.
+
+  CALL FUNCTION 'TEXT_CONVERT_XLS_TO_SAP'
+    EXPORTING
+      I_LINE_HEADER        = ''
+      I_TAB_RAW_DATA       = LT_RAWDATA
+      I_FILENAME           = P_FILE
+    TABLES
+      I_TAB_CONVERTED_DATA = LT_UPL
+    EXCEPTIONS
+      CONVERSION_FAILED    = 1
+      OTHERS               = 2.
+  IF SY-SUBRC <> 0.
+    MESSAGE ID SY-MSGID TYPE 'S' NUMBER SY-MSGNO
+      WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4 DISPLAY LIKE 'E'.
+    LEAVE LIST-PROCESSING.
+  ELSE.
+    READ TABLE LT_UPL INTO DATA(LS_UPL) INDEX 1.
+    LV_STRING = LS_UPL.
+    CALL FUNCTION 'RKD_WORD_WRAP'
+      EXPORTING
+        TEXTLINE            = LV_STRING
+        DELIMITER           = ' '
+        OUTPUTLEN           = 255
+      TABLES
+        OUT_LINES           = LT_OUT_LINES
+      EXCEPTIONS
+        OUTPUTLEN_TOO_LARGE = 1
+        OTHERS              = 2.
+
+    IF SY-SUBRC <> 0.
+      MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+          WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+    ELSE.
+      REFRESH:
+        GT_FLDCAT_U.
+      LOOP AT LT_OUT_LINES INTO DATA(LS_HEAD).
+        CONDENSE LS_HEAD.
+        LV_COL_POS = LV_COL_POS + 1.
+        LS_FCAT-FIELDNAME   = LS_HEAD.
+        LS_FCAT-INTTYPE     = 'C'.
+        LS_FCAT-INTLEN      = 255.
+        LS_FCAT-COL_POS     = LV_COL_POS.
+        APPEND LS_FCAT TO GT_FLDCAT_U.
+        CLEAR LS_FCAT.
+      ENDLOOP.
+    ENDIF.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form 1000_UPLOAD_EXCEL
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_UPLOAD_EXCEL .
+  DATA: DYN_TABLE TYPE REF TO DATA.
+  CALL METHOD CL_ALV_TABLE_CREATE=>CREATE_DYNAMIC_TABLE
+    EXPORTING
+      IT_FIELDCATALOG = GT_FLDCAT_U
+    IMPORTING
+      EP_TABLE        = DYN_TABLE.
+  ASSIGN DYN_TABLE->* TO <GFT_DATA>.
+  IF <GFT_DATA> IS ASSIGNED.
+
+    DATA: LT_RAWDATA TYPE TRUXS_T_TEXT_DATA.
+    CALL FUNCTION 'TEXT_CONVERT_XLS_TO_SAP'
+      EXPORTING
+        I_LINE_HEADER        = ''
+        I_TAB_RAW_DATA       = LT_RAWDATA
+        I_FILENAME           = P_FILE
+      TABLES
+        I_TAB_CONVERTED_DATA = <GFT_DATA>
+      EXCEPTIONS
+        CONVERSION_FAILED    = 1
+        OTHERS               = 2.
+    IF SY-SUBRC <> 0.
+      MESSAGE ID SY-MSGID TYPE 'S' NUMBER SY-MSGNO
+        WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4 DISPLAY LIKE 'E'.
+      LEAVE LIST-PROCESSING.
+    ELSE.
+      DELETE <GFT_DATA> FROM 1 TO 2.
+
+      IF NOT <GFT_DATA> IS INITIAL.
+        MOVE-CORRESPONDING <GFT_DATA> TO GT_UPLOAD.
+      ELSE.
+        MESSAGE S017 DISPLAY LIKE 'E'.
+        LEAVE LIST-PROCESSING.
+      ENDIF.
+    ENDIF.
+
+  ELSE.
+
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form 1000_CHECK_DATA_UPLOAD
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_CHECK_DATA_UPLOAD .
+
+  DATA:
+    LV_STT    TYPE I,
+    LS_UPLOAD TYPE GTY_UPLOAD.
+
+
+* Check length
+  LOOP      AT GT_UPLOAD INTO LS_UPLOAD.
+    DATA(LW_TABIX) = SY-TABIX.
+    LV_STT = LV_STT + 1.
+
+* Material Number
+    PERFORM CHECK_LENGTH
+      USING LS_UPLOAD-MATNR 'Material Number' 40.
+
+* Create Date
+    PERFORM CHECK_LENGTH
+      USING LS_UPLOAD-CRDATE 'Create Date' 8.
+
+* Create Time
+    PERFORM CHECK_LENGTH
+      USING LS_UPLOAD-CRTIME 'Create Time' 6.
+
+* Create Name
+    PERFORM CHECK_LENGTH
+      USING LS_UPLOAD-CRNAME 'Create Name' 12.
+
+  ENDLOOP.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form CHECK_LENGTH
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*&      --> LS_UPLOAD_MATNR
+*&      --> P_
+*&      --> P_40
+*&---------------------------------------------------------------------*
+FORM CHECK_LENGTH USING VALUE(LPV_VALUE)  TYPE C
+                        VALUE(LPV_FIELD)   TYPE C
+                        VALUE(LPV_LENGTH) TYPE I.
+
+  IF STRLEN( LPV_VALUE ) > LPV_LENGTH.
+    MESSAGE S004 WITH LPV_FIELD LPV_VALUE LPV_LENGTH DISPLAY LIKE 'E' .
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form 1000_DOWNLOAD_TEMPLATE
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM 1000_DOWNLOAD_TEMPLATE .
+
+  DATA: LV_ACTION TYPE SY-UCOMM.
+  LV_ACTION = LCL_WORKBENCH=>C_ACTION-EXPORT .
+
+  CALL FUNCTION 'ZXLWB_WORKBENCH'
+    EXPORTING
+      IV_FORMNAME        = 'ZDM_UPLOAD_EXCEL'
+      IV_ACTION          = LV_ACTION
+    EXCEPTIONS
+      PROCESS_TERMINATED = 1
+      OTHERS             = 2.
+  IF SY-SUBRC NE 0 .
+    MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+            WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4 .
+  ELSE.
+    LEAVE LIST-PROCESSING.
+  ENDIF .
+
+
+ENDFORM.
