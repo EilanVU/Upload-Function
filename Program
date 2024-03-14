@@ -1,0 +1,51 @@
+*--------------------------------------------------------------*
+* Program code  : ZPG_DM_UPLOAD_EXCEL
+* Program name  : Name of report
+* T-Code        : ZXYZ  (base on BRD)
+* Package       : ZPK_MBAL_DEV
+* Created by    : MBAL_DEV
+* Created date  : yyyy.mm.dd
+*--------------------------------------------------------------*
+* Modified management
+* Date         User       Description Ticket  TR
+* yyyy.mm.dd   MBAL_DEV	  Create      MR-123  Transport Request
+*
+*--------------------------------------------------------------*
+
+INCLUDE ZIN_DM_UPLOAD_EXCEL_TOP                 .    " Global Data
+INCLUDE ZXLWB_INCLUDE.
+INCLUDE ZIN_DM_UPLOAD_EXCEL_O01                 .  " PBO-Modules
+INCLUDE ZIN_DM_UPLOAD_EXCEL_I01                 .  " PAI-Modules
+INCLUDE ZIN_DM_UPLOAD_EXCEL_F01                 .  " FORM-Routines
+
+************************************************************************
+INITIALIZATION.
+************************************************************************
+* Initialization
+  PERFORM 1000_INIT_PROC.
+************************************************************************
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR P_FILE.
+************************************************************************
+* Open search help select file excel
+  PERFORM 1000_SH_FILE.
+************************************************************************
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR P_FNAME.
+************************************************************************
+* Open search help select file name was uploaded
+  PERFORM 1000_SH_FNAME.
+************************************************************************
+AT SELECTION-SCREEN OUTPUT.
+************************************************************************
+* Upadte screen
+  PERFORM 1000_UPD_SCREEN.
+************************************************************************
+AT SELECTION-SCREEN.
+************************************************************************
+* Check processing
+  PERFORM 1000_CHECK_PROC.
+************************************************************************
+START-OF-SELECTION.
+************************************************************************
+* Main processing
+************************************************************************
+  PERFORM 1000_MAIN_PROC.
