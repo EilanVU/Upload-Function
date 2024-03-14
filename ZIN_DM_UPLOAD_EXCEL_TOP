@@ -1,0 +1,61 @@
+*&---------------------------------------------------------------------*
+*& Include ZIN_DM_UPLOAD_EXCEL_TOP                  - Module Pool      ZPG_DM_UPLOAD_EXCEL
+*&---------------------------------------------------------------------*
+PROGRAM ZPG_DM_UPLOAD_EXCEL MESSAGE-ID ZMC_MAISON
+                            LINE-SIZE  132
+                            LINE-COUNT 65
+                            NO STANDARD PAGE HEADING.
+
+
+*-----------------------------------------------------------------------
+* Constant Definition
+*-----------------------------------------------------------------------
+CONSTANTS:
+  GC_FILTER TYPE STRING VALUE '*.*|*.*'.
+
+
+*-----------------------------------------------------------------------
+* Selection Screen Definition
+*-----------------------------------------------------------------------
+SELECTION-SCREEN BEGIN OF BLOCK BL1 WITH FRAME.
+* Line for radio buton
+  SELECTION-SCREEN BEGIN OF LINE .
+    PARAMETERS: RB_UPL RADIOBUTTON GROUP GRG1 USER-COMMAND RB_TYPE DEFAULT 'X'.  "Upload
+    SELECTION-SCREEN: COMMENT (19) TEXT-001 FOR FIELD RB_UPL.
+    PARAMETERS: RB_DIS RADIOBUTTON GROUP GRG1.                         "Display
+    SELECTION-SCREEN: COMMENT (28) TEXT-002 FOR FIELD RB_DIS.
+    PARAMETERS: RB_DOW RADIOBUTTON GROUP GRG1.                         "Download
+    SELECTION-SCREEN: COMMENT (28) TEXT-003 FOR FIELD RB_DOW.
+  SELECTION-SCREEN END OF LINE.
+* Excel file name
+  PARAMETERS:
+    P_FILE  TYPE LOCALFILE MODIF ID MG.
+* Uploaded date
+  SELECT-OPTIONS:
+    S_UPLDT FOR  SY-DATUM  MODIF ID MG NO-EXTENSION DEFAULT SY-DATUM.
+* Uploaded file name
+  PARAMETERS:
+    P_FNAME TYPE ZTB_UPLOAD_HD-FILENAME MODIF ID MG.
+SELECTION-SCREEN END OF BLOCK BL1.
+
+*-----------------------------------------------------------------------
+* Type Definition
+*-----------------------------------------------------------------------
+TYPES:
+* Upload data
+  BEGIN OF GTY_UPLOAD,
+    MATNR(255)  TYPE C,
+    CRDATE(255) TYPE C,
+    CRTIME(255) TYPE C,
+    CRNAME(255)  TYPE C,
+  END OF GTY_UPLOAD.
+
+*-----------------------------------------------------------------------
+* Inner Table Definition
+*-----------------------------------------------------------------------
+FIELD-SYMBOLS: <GFT_DATA> TYPE STANDARD TABLE.
+DATA:
+  GT_FLDCAT_H TYPE LVC_T_FCAT,
+  GT_FLDCAT_D TYPE LVC_T_FCAT,
+  GT_FLDCAT_U TYPE LVC_T_FCAT,
+  GT_UPLOAD   TYPE TABLE OF GTY_UPLOAD.
